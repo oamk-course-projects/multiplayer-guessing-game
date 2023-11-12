@@ -20,6 +20,7 @@ const loginUser = asyncHandler(async (req, res) => {
         const token = generateToken(user._id);
 
         res.json({
+        message: 'Login successful',
         _id: user._id,
         username: user.username,
         token

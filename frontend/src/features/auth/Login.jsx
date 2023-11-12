@@ -1,11 +1,13 @@
 // src/features/auth/Login.js
-import React, { useState } from 'react';
+import React, { useContext, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { UserContext} from '../../contexts/UserContext.jsx';
 
 function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const {setUser} = useContext(UserContext);
   const navigate = useNavigate();
 
   const handleLogin = async (event) => {
@@ -37,6 +39,7 @@ function Login() {
       const data = await response.json();
       localStorage.setItem('token', data.token);
       console.log('Login successful:', data);
+      setUser({username: data.username});
       navigate('/game'); // Redirect to the game page
     } catch (error) {
       setErrorMessage('Failed to login. Please check your username and password.');
