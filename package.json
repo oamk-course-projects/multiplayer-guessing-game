@@ -1,6 +1,7 @@
 {
   "name": "multiplayer-guessing-game",
   "version": "1.0.0",
+  "type": "module",
   "description": "A real-time multiplayer guessing game with React front-end, Node.js backend, Socket.IO for live interactions, user authentication, and MongoDB for score tracking.",
   "main": "index.js",
   "scripts": {

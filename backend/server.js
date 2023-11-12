@@ -1,28 +1,24 @@
-const express = require('express');
-const http = require('http');
-const socketIo = require('socket.io');
-const mongoose = require('mongoose');
-const cors = require('cors');
-const morgan = require('morgan'); 
-
-require('dotenv').config(); 
+import express from 'express';
+import http from 'http';
+import { Server } from 'socket.io';
+import mongoose from 'mongoose';
+import cors from 'cors';
+import morgan from 'morgan';
+import dotenv from 'dotenv';
+import connectDB from './config/db.js';
+dotenv.config();
 
 // MongoDB Connection
-mongoose.connect(process.env.MONGODB_URI).then(() => {
-  console.log('MongoDB connected');
-}).catch(err => {
-  console.error('MongoDB connection error:', err);
-});
-
+connectDB();
 // Express App Setup
 const app = express();
-app.use(cors()); 
+app.use(cors());
 app.use(express.json());
-app.use(morgan('combined')); 
+app.use(morgan('combined'));
 
 // HTTP Server and Socket.IO Setup
 const server = http.createServer(app);
-const io = socketIo(server);
+const io = new Server(server);
 
 // Handling WebSocket Connections
 io.on('connection', (socket) => {
@@ -31,7 +27,6 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     console.log('Client disconnected');
   });
-
 });
 
 // Define Express Routes
