@@ -4,8 +4,8 @@
   "description": "A real-time multiplayer guessing game with React front-end, Node.js backend, Socket.IO for live interactions, user authentication, and MongoDB for score tracking.",
   "main": "index.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js",
+    "start": "node backend/server.js",
+    "dev": "nodemon backend/server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
