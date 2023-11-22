@@ -8,32 +8,34 @@ const Navbar = () => {
   const isLoggedIn = !!localStorage.getItem('token');
 
   const handleLogout = () => {
-    localStorage.removeItem('token'); // Remove the token
-    navigate('/login'); // Redirect to the login page
-    // Trigger a re-render. You might use a state management solution or context for a real app
+    localStorage.removeItem('token');
+    navigate('/login');
     window.location.reload();
   };
 
   return (
-    <nav className="bg-gray-900 text-white px-4 py-3 shadow-md">
-      <div className="container mx-auto flex justify-between items-center">
-        <Link to="/" className="text-xl font-bold">
+    <nav className="bg-gradient-to-r from-blue-800 to-purple-600 text-white py-4 shadow-lg">
+      <div className="container mx-auto flex justify-between items-center px-5">
+        <Link to="/" className="text-2xl font-bold">
           Multiplayer Guessing Game
         </Link>
-        <div className="flex space-x-6 text-lg">
-          <Link to="/" className="hover:text-blue-400 transition duration-300 ease-in-out">
+        <div className="flex items-center space-x-4">
+          <Link to="/" className="text-lg transition-colors duration-300 hover:text-blue-200">
             Home
           </Link>
           {isLoggedIn ? (
-            <button onClick={handleLogout} className="hover:text-red-400 transition duration-300 ease-in-out">
+            <button
+              onClick={handleLogout}
+              className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded transition duration-300"
+            >
               Logout
             </button>
           ) : (
             <>
-              <Link to="/login" className="hover:text-blue-400 transition duration-300 ease-in-out">
+              <Link to="/login" className="text-lg transition-colors duration-300 hover:text-blue-200">
                 Login
               </Link>
-              <Link to="/register" className="hover:text-blue-400 transition duration-300 ease-in-out">
+              <Link to="/register" className="text-lg transition-colors duration-300 hover:text-blue-200">
                 Register
               </Link>
             </>
