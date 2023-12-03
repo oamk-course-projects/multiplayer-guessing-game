@@ -11,7 +11,7 @@ function Register() {
     event.preventDefault(); // Prevents the default form submit action from reloading the page
 
     try {
-      const response = await fetch('http://localhost:5000/api/users/register', {
+      const response = await fetch('http://localhost:5005/api/users/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -1,6 +1,6 @@
 // src/features/game/GamePage.jsx
 
-import React, {useContext} from 'react';
+import {useContext} from 'react';
 import GameBoard from './GameBoard';
 import { UserContext } from '../../contexts/UserContext.jsx';
 

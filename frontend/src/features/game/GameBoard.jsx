@@ -1,32 +1,29 @@
-// src/features/game/GameBoard.jsx
-import React, { useState } from 'react';
-import GuessForm from '../../components/GuessForm'; // Assuming GuessForm is placed in the components directory
+import { useState, useEffect } from 'react';
+import GuessForm from '../../components/GuessForm';
+import { io } from 'socket.io-client';
+
+const socket = io('http://localhost:5005');
 
 function GameBoard() {
-  const [guess, setGuess] = useState('');
   const [feedback, setFeedback] = useState('');
   const [attempts, setAttempts] = useState(0);
-  const [correctNumber, setCorrectNumber] = useState(Math.floor(Math.random() * 100) + 1); // Random number between 1 and 100
 
-  const handleGuessSubmit = (userGuess) => {
-    const numGuess = parseInt(userGuess, 10);
-    setGuess('');
-    setAttempts((prevAttempts) => prevAttempts + 1); // Ensure attempts are incremented
+  useEffect(() => {
+    socket.on('gameState', (gameState) => {
+      setFeedback(gameState.feedback);
+      setAttempts(gameState.attempts);
+    });
 
-    if (numGuess === correctNumber) {
-      setFeedback('Correct!');
-    } else if (numGuess > correctNumber) {
-      setFeedback('Too high!');
-    } else {
-      setFeedback('Too low!');
-    }
+    return () => socket.off('gameState');
+  }, []);
+
+  const handleGuessSubmit = (guess) => {
+    // Send the guess to the server via Socket.IO event
+    socket.emit('newGuess', guess);
   };
 
   const handleReset = () => {
-    setGuess('');
-    setFeedback('');
-    setAttempts(0);
-    setCorrectNumber(Math.floor(Math.random() * 100) + 1);
+    socket.emit('reset');
   };
 
   return (

@@ -27,54 +27,74 @@ const io = new Server(server, {
   }
 });
 
-// Store game state - this is very basic and would need to be expanded for a full game
-const gameState = {
-  players: {}, // Stores player socket ids
-  guesses: {}, // Stores guesses for each player
-  correctNumber: Math.floor(Math.random() * 100) + 1 // Random number between 1 and 100
-};
+// Store game state for each room
+const rooms = {};
 
-// Handling WebSocket Connections
+// Function to send game state updates to all players in a room
+const sendGameState = (roomId) => {
+  const gameState = rooms[roomId];
+  io.to(roomId).emit('gameState', gameState);
+};
+  
 io.on('connection', (socket) => {
   console.log('New WebSocket connection established with id:', socket.id);
-  // Handle player joining the game
-  socket.on('joinGame', (playerId) => {
-    gameState.players[socket.id] = playerId;
-    console.log(`Player ${playerId} with socket id ${socket.id} joined the game`);
-    // Send current state to the new player
-    socket.emit('gameState', gameState);
-  });
 
-  // Handle a new guess
-  socket.on('newGuess', (guess) => {
-    console.log(`Player ${socket.id} guessed ${guess}`);
-    gameState.guesses[socket.id] = guess;
-    // Check the guess
-    let result = '';
-    if (guess === gameState.correctNumber) {
-      result = 'correct';
-      // You might want to handle ending the game or starting a new round here
-    } else if (guess < gameState.correctNumber) {
-      result = 'too low';
-    } else if (guess > gameState.correctNumber) {
-      result = 'too high';
+  socket.on('joinRoom', (roomId, playerId) => {
+    // Create room if it doesn't exist
+    if (!rooms[roomId]) {
+      rooms[roomId] = {
+        players: {},
+        guesses: {},
+        correctNumber: Math.floor(Math.random() * 10) + 1,
+        maxGuesses: 3,
+        currentRound: 1,
+      };
     }
-    // Send result back to all players
-    console.log(`WebSocket connection ${socket.id} disconnected`);
-    io.emit('guessResult', { playerId: gameState.players[socket.id], guess, result });
-  });
+    // Add player to room
+    rooms[roomId].players[socket.id] = playerId;
+    console.log(`Player ${playerId} with socket id ${socket.id} joined room ${roomId}`);
+    // Join the room
+    socket.join(roomId);
+    // Send current state to the new player
+    sendGameState(roomId);
+    // Notify other players that a new player has joined
+    socket.to(roomId).emit('playerJoined', playerId);
 
-  // Handle disconnect
-  socket.on('disconnect', () => {
-    console.log(`Player ${gameState.players[socket.id]} disconnected`);
-    // Remove player from game state
-    delete gameState.players[socket.id];
-    delete gameState.guesses[socket.id];
-    // Update all players with the new game state
-    io.emit('gameState', gameState);
+    // Handle a new guess in a room
+    socket.on('newGuess', (guess) => {
+      console.log(`Player ${socket.id} guessed ${guess} in room ${roomId}`);
+      console.log(`Received guess from player ${socket.id}: ${guess}`);
+      const gameState = rooms[roomId];
+      gameState.guesses[socket.id] = guess;
+      // Check the guess
+      let result = '';
+      if (guess === gameState.correctNumber) {
+        result = 'correct';
+        // You might want to handle ending the game or starting a new round here
+        // add the possibility to start a new round
+      } else if (guess < gameState.correctNumber) {
+        result = 'too low';
+      } else if (guess > gameState.correctNumber) {
+        result = 'too high';
+      }
+      // Send result back to all players
+      io.to(roomId).emit('guessResult', { playerId: gameState.players[socket.id], guess, result });
+      sendGameState(roomId);
+    });
+
+    // Handle disconnect within the room
+    socket.on('disconnect', () => {
+      const gameState = rooms[roomId];
+      if (gameState && gameState.players[socket.id]) {
+        console.log(`Player ${gameState.players[socket.id]} disconnected`);
+        delete gameState.players[socket.id];
+        delete gameState.guesses[socket.id];
+        sendGameState(roomId); // Send updated game state after player disconnects
+        socket.to(roomId).emit('playerLeft', gameState.players[socket.id]); // Notify other players about disconnection
+      }
+    });
   });
 });
-
 // Define Express Routes
 app.get('/', (req, res) => {
   res.send('Server is running and ready for WebSocket connections');
