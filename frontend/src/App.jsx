@@ -8,6 +8,7 @@ import Login from './features/auth/Login';
 import Register from './features/auth/Register';
 import GamePage from './features/game/GamePage'; // Import the new GamePage component
 import HomePage from './HomePage';
+import PlayerHistory from './features/history/PlayerHistory';
 import './App.css';
 
 function App() {
@@ -21,6 +22,7 @@ function App() {
             <Route path="/register" element={<Register />} />
             <Route path="/game" element={<GamePage />} /> 
             <Route path="/" element={<HomePage />} />
+            <Route path="/player-history" element={<PlayerHistory />} />
           </Routes>
         </main>
         <Footer />

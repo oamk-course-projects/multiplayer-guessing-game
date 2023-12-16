@@ -38,8 +38,9 @@ function Login() {
 
       const data = await response.json();
       localStorage.setItem('token', data.token);
+      localStorage.setItem('username', JSON.stringify(data.username));
       console.log('Login successful:', data);
-      setUser({username: data.username});
+      setUser({ username: data.username, id: data._id }); // Update with actual user ID from response
       navigate('/game'); // Redirect to the game page
     } catch (error) {
       setErrorMessage('Failed to login. Please check your username and password.');

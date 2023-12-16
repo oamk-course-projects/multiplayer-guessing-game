@@ -7,109 +7,137 @@ import morgan from 'morgan';
 import dotenv from 'dotenv';
 import connectDB from './config/db.js';
 import userRoutes from './routes/userRoutes.js';
+import gameHistoryRoutes from './routes/gameHistoryRoutes.js';
 dotenv.config();
-
-// MongoDB Connection
 connectDB();
 
-// Express App Setup
 const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(morgan('combined'));
 
-// HTTP Server and Socket.IO Setup
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "*", // Adjust the origin according to your frontend deployment
-    methods: ["GET", "POST"] // Allowable methods
+    origin: "*", 
+    methods: ["GET", "POST"]
   }
 });
 
-// Store game state for each room
 const rooms = {};
 
-// Function to send game state updates to all players in a room
-const sendGameState = (roomId) => {
-  const gameState = rooms[roomId];
-  io.to(roomId).emit('gameState', gameState);
-};
-  
 io.on('connection', (socket) => {
-  console.log('New WebSocket connection established with id:', socket.id);
-
-  socket.on('joinRoom', (roomId, playerId) => {
-    // Create room if it doesn't exist
+  socket.on('joinRoom', (roomId, username) => {
+    socket.currentRoom = roomId;
     if (!rooms[roomId]) {
       rooms[roomId] = {
         players: {},
         guesses: {},
-        correctNumber: Math.floor(Math.random() * 10) + 1,
+        correctNumber: Math.floor(Math.random() * 100) + 1, // Guessing number between 1 and 100
         maxGuesses: 3,
         currentRound: 1,
+        attempts: 0,
+        winner: null
       };
+      console.log(`New room: ${rooms[roomId]}`);
+      console.log(`New room created: ${roomId}`);
     }
-    // Add player to room
-    rooms[roomId].players[socket.id] = playerId;
-    console.log(`Player ${playerId} with socket id ${socket.id} joined room ${roomId}`);
-    // Join the room
+    rooms[roomId].players[socket.id] = username;
     socket.join(roomId);
-    // Send current state to the new player
-    sendGameState(roomId);
-    // Notify other players that a new player has joined
-    socket.to(roomId).emit('playerJoined', playerId);
+    console.log(`${username} joined room ${roomId}`);
+  });
 
-    // Handle a new guess in a room
-    socket.on('newGuess', (guess) => {
-      console.log(`Player ${socket.id} guessed ${guess} in room ${roomId}`);
-      console.log(`Received guess from player ${socket.id}: ${guess}`);
-      const gameState = rooms[roomId];
-      gameState.guesses[socket.id] = guess;
-      // Check the guess
-      let result = '';
-      if (guess === gameState.correctNumber) {
-        result = 'correct';
-        // You might want to handle ending the game or starting a new round here
-        // add the possibility to start a new round
-      } else if (guess < gameState.correctNumber) {
-        result = 'too low';
-      } else if (guess > gameState.correctNumber) {
-        result = 'too high';
-      }
-      // Send result back to all players
-      io.to(roomId).emit('guessResult', { playerId: gameState.players[socket.id], guess, result });
-      sendGameState(roomId);
-    });
+  socket.on('newGuess', (guess) => {
+    const roomId = socket.currentRoom;
+        if (!roomId || !rooms[roomId]) {
+            console.error(`Room not found for guess submission. Room ID: ${roomId}`);
+            return;
+        }
 
-    // Handle disconnect within the room
-    socket.on('disconnect', () => {
-      const gameState = rooms[roomId];
-      if (gameState && gameState.players[socket.id]) {
-        console.log(`Player ${gameState.players[socket.id]} disconnected`);
-        delete gameState.players[socket.id];
-        delete gameState.guesses[socket.id];
-        sendGameState(roomId); // Send updated game state after player disconnects
-        socket.to(roomId).emit('playerLeft', gameState.players[socket.id]); // Notify other players about disconnection
+        const gameState = rooms[roomId];
+        // Ensure that gameState.attempts is an object
+        if (typeof gameState.attempts !== 'object') {
+          gameState.attempts = {};
       }
-    });
+
+        // Initialize attempts for the player if not already done
+        if (!gameState.attempts[socket.id]) {
+          gameState.attempts[socket.id] = 0;
+      }
+
+    // Check if this player has reached maximum attempts
+    if (gameState.attempts[socket.id] >= gameState.maxGuesses) {
+      socket.emit('maxAttemptsReached', { message: 'Maximum number of attempts reached' });
+      return;
+    }
+    const numericGuess = parseInt(guess, 10);
+    if (isNaN(numericGuess)) {
+      console.error('Invalid guess:', guess);
+      return;
+    }
+
+    console.log(`${gameState.players[socket.id]} guessed ${numericGuess} in room ${roomId}`);
+    gameState.guesses[socket.id] = numericGuess;
+    gameState.attempts[socket.id]++;
+    console.log(`Game State Update in Room ${roomId}:`, JSON.stringify(gameState, null, 2));
+
+
+    let feedback;
+    if (numericGuess === gameState.correctNumber) {
+      feedback = 'Correct!';
+      gameState.winner = gameState.players[socket.id];
+      console.log(`Winner found: ${gameState.winner}`);
+      io.to(roomId).emit('gameOver', { winner: gameState.winner });
+    } else if (numericGuess < gameState.correctNumber) {
+      feedback = 'Too low';
+    } else {
+      feedback = 'Too high';
+    }
+    // Emit attempt count to the specific player
+    socket.emit('attemptUpdate', { attempts: gameState.attempts[socket.id] });
+    socket.emit('guessFeedback', { guess: numericGuess, feedback });
+    if (!gameState.winner && gameState.attempts >= gameState.maxGuesses) {
+      io.to(roomId).emit('maxAttemptsReached', { message: 'Maximum number of attempts reached' });
+    }
+  });
+
+  socket.on('reset', () => {
+    const roomId = socket.currentRoom;
+    const gameState = rooms[roomId];
+    if (roomId && gameState) {
+      gameState.correctNumber = Math.floor(Math.random() * 100) + 1;
+      gameState.guesses = {};
+      gameState.attempts = 0;
+      gameState.winner = null;
+      gameState.attempts = {};
+      console.log(`Game reset in room ${roomId}`);
+      console.log(`Game reset in room ${roomId}`);
+      console.log(`New Game State after Reset:`, JSON.stringify(rooms[roomId], null, 2));
+  
+    }
+  });
+
+  socket.on('disconnect', () => {
+    const roomId = socket.currentRoom;
+    const gameState = rooms[roomId];
+    if (roomId && gameState && gameState.players[socket.id]) {
+      delete gameState.players[socket.id];
+      delete gameState.guesses[socket.id];
+      if (Object.keys(gameState.players).length === 0) {
+        delete rooms[roomId];
+        console.log(`Room ${roomId} deleted as last player left`);
+      }
+    }
   });
 });
-// Define Express Routes
+
 app.get('/', (req, res) => {
   res.send('Server is running and ready for WebSocket connections');
 });
 
-// Error Handling Middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).send('Something broke!');
-});
-
-// Define API Routes
 app.use('/api/users', userRoutes);
+app.use('/api/game-history', gameHistoryRoutes);
 
-// Start Server
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`HTTP server running on port ${PORT}`);

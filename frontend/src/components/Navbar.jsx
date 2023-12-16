@@ -23,6 +23,16 @@ const Navbar = () => {
           <Link to="/" className="text-lg transition-colors duration-300 hover:text-blue-200">
             Home
           </Link>
+          {isLoggedIn && (
+             <>
+             <Link to="/game" className="text-lg transition-colors duration-300 hover:text-blue-200">
+               Game
+             </Link>
+             <Link to="/player-history" className="text-lg transition-colors duration-300 hover:text-blue-200">
+               Player History
+             </Link>
+           </>
+          )}
           {isLoggedIn ? (
             <button
               onClick={handleLogout}
