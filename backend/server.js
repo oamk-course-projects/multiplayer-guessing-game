@@ -1,4 +1,10 @@
 import express from 'express';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 import http from 'http';
 import { Server } from 'socket.io';
 import mongoose from 'mongoose';
@@ -131,14 +137,24 @@ io.on('connection', (socket) => {
   });
 });
 
-app.get('/', (req, res) => {
-  res.send('Server is running and ready for WebSocket connections');
-});
 
 app.use('/api/users', userRoutes);
 app.use('/api/game-history', gameHistoryRoutes);
 
-const PORT = process.env.PORT || 5000;
+if (process.env.NODE_ENV === 'production') {
+  // Set static folder
+  app.use(express.static(path.join(__dirname, '../frontend/build')));
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../frontend/build', 'index.html'));
+  });
+  
+} else {
+  app.get('/', (req, res) => {
+    res.send('Server is running and ready for WebSocket connections');
+  });
+}
+
+const PORT = process.env.PORT || 5005;
 server.listen(PORT, () => {
   console.log(`HTTP server running on port ${PORT}`);
 });
