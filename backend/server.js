@@ -33,7 +33,7 @@ io.on('connection', (socket) => {
       rooms[roomId] = {
         players: {},
         guesses: {},
-        correctNumber: Math.floor(Math.random() * 100) + 1, // Guessing number between 1 and 100
+        correctNumber: Math.floor(Math.random() * 10) + 1, // Guessing number between 1 and 100
         maxGuesses: 3,
         currentRound: 1,
         attempts: 0,
